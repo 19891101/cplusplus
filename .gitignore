@@ -1,5 +1,5 @@
 *.aux
 *.log
 *.gz
-template/variadic/main
+*/*/main
 
