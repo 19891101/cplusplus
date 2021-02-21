@@ -1,0 +1,345 @@
+\documentclass{article}
+\usepackage{xeCJK}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\setlength{\parindent}{0pt}
+\renewcommand{\baselinestretch}{1.0}
+\lstset{
+	frame=tb, % draw a frame at the top and bottom of the code block
+	showstringspaces=false, % don't mark spaces in strings
+	numbers=left, % display line numbers on the left
+	commentstyle=\color{green}, % comment color
+	keywordstyle=\color{blue}, % keyword color
+	stringstyle=\color{red} % string color
+}
+\usepackage[a4paper,left=20mm,right=20mm,top=15mm,bottom=15mm]{geometry}  
+
+\title{sed}
+\author{MengChunlei}
+
+\linespread{1.2}
+\begin{document}
+\maketitle
+\section{基本用法}
+sed全称是stream editor.简单说,它是按照行来处理文本的一个工具. 本文将按照以下12个部分来总结它的用法: \par
+\begin{itemize}
+	\item 替换
+	\item 地址使用
+	\item 删除
+	\item 插入
+    \item 整行替换和转换
+	\item 打印
+	\item 读写文件
+	\item 多行用法
+	\item 空间保持和排除命令
+	\item 流改变
+	\item 模式替代
+	\item 用例示范
+\end{itemize}
+
+\section{替换}
+替换的命令: s/origin/replacement/. 多个替换命令可以串联, 用分号隔开. \par
+\begin{lstlisting}[language=bash, caption={Substitution}]
+[chunleimeng]$ echo "hello world" | sed 's/hello/Hello/'
+Hello world
+[chunleimeng]$ cat file1 
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
+[chunleimeng]$ sed -e 's/brown/green/; s/dog/cat/' file1 
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+[chunleimeng]$
+\end{lstlisting}
+命令可以放在一个文件里面. 也可以用$-e$以写在多行上.
+\begin{lstlisting}[language=bash, caption={Substitution}]
+[chunleimeng]$ cat script1.sed 
+s/brown/green/
+s/dog/cat/
+[chunleimeng]$ sed -f script1.sed file1 
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+[chunleimeng]$ sed -e '
+> s/brown/green/
+> s/dog/cat/' file1
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+The quick green fox jumps over the lazy cat.
+\end{lstlisting}
+替换还有四种控制:
+\begin{itemize}
+	\item 数字, 替换第几处
+	\item g, 全部替换
+	\item p, 打印替换的行
+	\item w file, 将替换的结果写到文件
+\end{itemize}
+\begin{lstlisting}[language=bash, caption={Substitution}]
+[chunleimeng]$ cat file2
+this is test a test
+this is test
+no key
+[chunleimeng]$ sed 's/test/new/' file2  /*默认替换第一次出现的地方*/
+this is new a test
+this is new
+no key
+[chunleimeng]$ sed 's/test/new/2' file2 /*替换第二次出现的地方*/
+this is test a new
+this is test
+no key
+[chunleimeng]$ sed 's/test/new/g' file2
+this is new a new
+this is new
+no key
+[chunleimeng]$ sed -n 's/test/new/p' file2  /*-n表示不产生输出*/
+this is new a test
+this is new
+[chunleimeng]$ sed -n 's/test/new/2p' file2
+this is test a new
+[chunleimeng]$ sed -n 's/test/new/w result.txt' file2
+[chunleimeng]$ cat result.txt 
+this is new a test
+this is new
+\end{lstlisting}
+
+\section{地址使用}
+如果只想把命令作用于某些行或者不作用于某些行, 需要使用地址.有两种方式: \par
+\begin{itemize}
+	\item 以数字表示区间
+	\item 用本文模式找到特定的行
+\end{itemize}
+~\\
+使用数字表示区间的样例: \par
+\begin{lstlisting}[language=bash, caption={Address}]
+[chunleimeng]$ sed '2s/dog/cat/' file1  /*只替换第二行*/
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy cat.
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
+[chunleimeng]$ sed '2,3s/dog/cat/' file1 /*替换第二行到第三行*/
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy cat.
+The quick brown fox jumps over the lazy cat.
+The quick brown fox jumps over the lazy dog.
+[chunleimeng]$ sed '2,$s/dog/cat/' file1 /*替换第二行到最后一行*/
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy cat.
+The quick brown fox jumps over the lazy cat.
+The quick brown fox jumps over the lazy cat.
+[chunleimeng]$ sed '2{
+> s/fox/elephant/
+> s/dog/cat/}' file1
+The quick brown fox jumps over the lazy dog.
+The quick brown elephant jumps over the lazy cat.
+The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
+[chunleimeng]$
+\end{lstlisting}
+\par
+~\\
+使用文本模式示例: \par
+\begin{lstlisting}[language=bash, caption={Address}]
+[chunleimeng]$ cat file2
+this is test a test
+this is test
+no key
+[chunleimeng]$ sed '/test a/s/test/abc/g' file2
+this is abc a abc
+this is test
+no key
+[chunleimeng]$
+\end{lstlisting}
+
+
+\section{删除}
+删除的命令是d. \par
+\begin{lstlisting}[language=bash, caption={Delete}]
+[chunleimeng]$ cat file3
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+this is line number 1 again
+line six
+line seven
+[chunleimeng]$ sed 'd' file3  /*删除所有行*/
+[chunleimeng]$ sed '3d' file3 /*删除第三行*/
+this is line number 1
+this is line number 2
+this is line number 4
+this is line number 1 again
+line six
+line seven
+[chunleimeng]$ sed '3,$d' file3 /*删除第三行到结尾*/
+this is line number 1
+this is line number 2
+[chunleimeng]$ sed '/number 1/d' file3 /*删除包含'number 1' 的行*/
+this is line number 2
+this is line number 3
+this is line number 4
+line six
+line seven
+[chunleimeng]$ sed '/1/,/3/d' file3 /*删除包含1的行到包含3的行. 数字1第二次出现的时候没有*/
+this is line number 4               /*对应的3的行,所以后面的都删除了*/
+\end{lstlisting}
+\section{插入}
+插入有两种, i表示在指定行前面插入, a表示在指定行后面插入. \par
+\begin{lstlisting}[language=bash, caption={Insert}]
+[chunleimeng]$ cat file4 
+this is line number 1
+this is line number 2
+[chunleimeng]$ sed '2i\insert line' file4 /*在第二行前面插入*/
+this is line number 1
+insert line
+this is line number 2
+[chunleimeng]$ sed '$a\insert line' file4 /*在最后一行后面插入*/
+this is line number 1
+this is line number 2
+insert line
+[chunleimeng]$ sed '2i\   /*插入多行*/
+> insert line1\
+> insert line2' file4
+this is line number 1
+insert line1
+insert line2
+this is line number 2
+\end{lstlisting}
+\section{整行替换和转换}
+整行替换的命令是c. \par
+\begin{lstlisting}[language=bash, caption={Change}]
+[chunleimeng]$ cat file3
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+this is line number 1 again
+line six
+line seven
+[chunleimeng]$ sed '3c\changed line' file3  /*替换第三行*/
+this is line number 1
+this is line number 2
+changed line
+this is line number 4
+this is line number 1 again
+line six
+line seven
+[chunleimeng]$ sed '/number 1/c\changed line' file3 /*替换包含'number 1'的行*/
+changed line
+this is line number 2
+this is line number 3
+this is line number 4
+changed line
+line six
+line seven
+[chunleimeng]$ sed '2,3c\changed line' file3 /*替换第2行到第3行*/
+this is line number 1
+changed line
+this is line number 4
+this is line number 1 again
+line six
+line seven
+\end{lstlisting}
+转换的命令是: y/inchars/outchars, 其中inchars和outchars要一样长.它会把每一个inchars替换为对应的outchars. \par
+\begin{lstlisting}[language=bash, caption={Transform}]
+[chunleimeng]$ sed 'y/123/789/' file3
+this is line number 7
+this is line number 8
+this is line number 9
+this is line number 4
+this is line number 7 again
+line six
+line seven
+[chunleimeng]$ echo '111222333' | sed 'y/123/789/'  /*会替换所有的字符*/
+777888999
+\end{lstlisting}
+\section{打印}
+控制打印的有三个命令:
+\begin{itemize}
+	\item p, 打印本文行
+	\item =, 打印行号
+	\item l, 列出行
+\end{itemize}
+\begin{lstlisting}[language=bash, caption={Print}]
+[chunleimeng]$ cat file5
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+[chunleimeng]$ sed -n '/number 3/p' file5
+this is line number 3
+[chunleimeng]$ sed -n '2,3p' file5
+this is line number 2
+this is line number 3
+[chunleimeng]$ sed -n '/3/{
+> p
+> s/line/test/p
+> }' file5
+this is line number 3
+this is test number 3
+[chunleimeng]$ sed '=' file5
+1
+this is line number 1
+2
+this is line number 2
+3
+this is line number 3
+4
+this is line number 4
+[chunleimeng]$ sed -n '/number 4/{
+> =
+> p
+> }' file5
+4
+this is line number 4 
+[chunleimeng]$ cat file6
+tag	test	end
+[chunleimeng]$ sed -n 'l' file6 /*tab会显示为\t*/
+tag\ttest\tend$
+[chunleimeng]$
+\end{lstlisting}
+
+\section{读写文件}
+\begin{itemize}
+	\item w, 写文件
+	\item r, 读文件
+\end{itemize}
+\begin{lstlisting}[language=bash, caption={File}]
+[chunleimeng]$ cat file5
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+[chunleimeng]$ sed '1,2w result.txt' file5
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+[chunleimeng]$ cat result.txt 
+this is line number 1
+this is line number 2
+[chunleimeng]$ cat file7
+insert line1
+insert line2
+[chunleimeng]$ sed '3r file7' file5 /*将file7中的内容插入第三行后*/
+this is line number 1
+this is line number 2
+this is line number 3
+insert line1
+insert line2
+this is line number 4
+[chunleimeng]$ sed '$r file7' file5
+this is line number 1
+this is line number 2
+this is line number 3
+this is line number 4
+insert line1
+insert line2
+\end{lstlisting}
+\end{document}
+
