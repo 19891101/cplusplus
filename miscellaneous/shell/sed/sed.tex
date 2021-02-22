@@ -341,5 +341,127 @@ this is line number 4
 insert line1
 insert line2
 \end{lstlisting}
+
+\section{多行用法}
+
+\begin{itemize}
+	\item next命令
+	\item 多行删除
+	\item 多行打印
+\end{itemize}
+next命令有两种,小写n表示移动到下一行,大写N表示将下一行的内容附加到当前行的后面. \par
+\begin{lstlisting}[language=bash, caption={next-n}]
+[chunleimeng]$ cat file8
+first line
+second line
+third line
+forth line
+[chunleimeng]$ sed '/first/{n ; d}' file8 /*删除first行的后面一行*/
+first line
+third line
+forth line
+[chunleimeng]$
+\end{lstlisting}
+\begin{lstlisting}[language=bash, caption={next-N}]
+[chunleimeng]$ cat file9
+first line hello
+world second line
+third line
+abc hello world ef
+we hello world
+[chunleimeng]$ sed 'N; s/hello world/HELLO WORLD/' file9 /*可以发现, 第一行第二行换行的*/
+first line hello                                         /*hello world没有替换成功*/
+world second line
+third line
+abc HELLO WORLD ef
+we hello world
+[chunleimeng]$ sed 'N; s/hello.world/HELLO WORLD/' file9 /*上面的问题解决了, 但是第一行*/
+first line HELLO WORLD second line                       /*第二行合并了*/
+third line
+abc HELLO WORLD ef
+we hello world
+[chunleimeng]$ sed '                 /*分两种情况处理.问题是最后一行没有成功.因为没有*/
+> N                                  /*下一行, 所以N命令失败了, 从而结束. 后面一节会*/
+> s/hello\nworld/HELLO\nWORLD/       /*解决这个问题*/
+> s/hello world/HELLO WORLD/' file9
+first line HELLO
+WORLD second line
+third line
+abc HELLO WORLD ef
+we hello world
+\end{lstlisting}
+接下来是多行删除. 命令是D. \par
+\begin{lstlisting}[language=bash, caption={Delete-D}]
+[chunleimeng]$ cat file9
+first line hello
+world second line
+third line
+abc hello world ef
+we hello world
+[chunleimeng]$ sed 'N; /hello.world/d' file9 /*文件的第1-2行删除了一次,第3-4行删除了一次*/
+we hello world
+[chunleimeng]$ sed 'N; /hello.world/D' file9 /*删除目标串所在行的前一行*/
+world second line
+third line
+we hello world
+\end{lstlisting}
+接下来是多行打印. \par
+\begin{lstlisting}[language=bash, caption={Print}]
+[chunleimeng]$ sed -n 'N; /hello\nworld/p' file9 /*打印合并后的所有*/
+first line hello
+world second line
+[chunleimeng]$ sed -n 'N; /hello\nworld/P' file9 /*打印前面一行*/
+first line hello
+[chunleimeng]$
+\end{lstlisting}
+
+\section{空间保持和排除命令}
+sed命令工作的空间称作模式空间,还有一块缓冲区叫做保持空间.有一些命令可以在这两个之间交换数据: \par
+\begin{itemize}
+	\item h: 从模式空间复制到保持空间
+	\item H: 将模式空间附加到保持空间
+	\item g: 从保持空间复制到模式空间
+	\item G: 将保持空间附加到模式空间
+	\item x: 交换模式空间和保持空间
+\end{itemize}
+\begin{lstlisting}[language=bash, caption={Hold Space}]
+[chunleimeng]$ cat file9
+first line hello
+world second line
+third line
+abc hello world ef
+we hello world
+[chunleimeng]$ sed -n '/first/{h; n; p; g; p}' file9 /*先打印first行的下一行*/
+world second line                                    /*再打印first行*/
+first line hello
+\end{lstlisting}
+排除命令是感叹号!, 它表示相反的操作. \par
+\begin{lstlisting}[language=bash, caption={Negate}]
+[chunleimeng]$ cat file9
+first line hello
+world second line
+third line
+abc hello world ef
+we hello world
+[chunleimeng]$ sed -n '/hello/!p' file9 /*包含hello的行不输出*/
+world second line
+third line
+[chunleimeng]$ sed '$!N                /*最后一行不执行N操作*/
+> s/hello\nworld/HELLO\nWORLD/
+> s/hello world/HELLO WORLD/' file9
+first line HELLO
+WORLD second line
+third line
+abc HELLO WORLD ef
+we HELLO WORLD
+[chunleimeng]$ sed -n '{1!G; h; $p}' file9  /*倒序输出文件:*/
+we hello world                              /*    1: 第一行不执行G操作*/
+abc hello world ef                          /*    2: 到最后一行的时候才执行p操作*/
+third line
+world second line
+first line hello
+
+\end{lstlisting}
+
 \end{document}
 
