@@ -463,5 +463,72 @@ first line hello
 
 \end{lstlisting}
 
+\section{流改变}
+正常的执行规则对于文本的每一行,顺序执行脚本中的每个命令.流改变的意思是可以改变这个规则,包括两个命令,一个命令类似C语言的goto, 即满足某个条件的话会跳转到某个地方去执行之后的命令; 另一个也是类似goto, 不过不是某个条件成立, 而是之前的命令执行成功时跳转.第一个命令是b,第二个命令是t. \par
+\begin{lstlisting}[language=bash, caption={Stream Change-b}]
+[chunleimeng]$ cat file9
+first line hello
+world second line
+third line
+abc hello world ef
+we hello world
+[chunleimeng]$ 
+[chunleimeng]$ sed '2,3b; s/world/WORLD/' file9  /*第2-3行直接跳转到脚本的最后*/
+first line hello                                 /*其他行不跳转, 去执行后面的替换命令*/
+world second line
+third line
+abc hello WORLD ef
+we hello WORLD
+[chunleimeng]$ sed '/hello/b label; s/world/WORLD/; :label s/hello/HELLO/' file9
+first line HELLO                      /*包含hello的行跳转到label去替换hello*/
+WORLD second line                     /*不包含hello的会顺序执行所有的命令*/
+third line
+abc HELLO world ef
+we HELLO world
+[chunleimeng]$ echo "this, is, a, test, to, remove, commas" | sed -n '
+:start
+s/,//1p             /*去掉逗号并打印*/
+/,/b start'         /*替换后还有逗号就跳转,否则结束*/
+this is, a, test, to, remove, commas
+this is a, test, to, remove, commas
+this is a test, to, remove, commas
+this is a test to, remove, commas
+this is a test to remove, commas
+this is a test to remove commas 
+[chunleimeng]$ sed '
+> s/hello/HELLO/                  /*替换hello成功, 则跳转到脚本最后*/
+> t                               /*否则不跳转, 替换world*/
+> s/world/WORLD/' file9
+first line HELLO
+WORLD second line
+third line
+abc HELLO world ef
+we HELLO world
+[chunleimeng]$ echo "this, is, a, test, to, remove, commas" | sed -n '
+:start
+s/,//1p
+t start'          /*替换逗号成功则跳转到start*/
+this is, a, test, to, remove, commas
+this is a, test, to, remove, commas
+this is a test, to, remove, commas
+this is a test to, remove, commas
+this is a test to remove, commas
+this is a test to remove commas
+\end{lstlisting}
+
+\section{模式替代}
+这个跟正则表达式中的反向引用类似, 就是使用匹配的模式. \par
+\begin{lstlisting}[language=bash, caption={Stream Change-b}]
+[chunleimeng]$ echo 'The cat sleeps in his hat' | sed 's/\(.at\)/"\1"/g'
+The "cat" sleeps in his "hat"   /*将cat和hat加上引号*/
+[chunleimeng]$ echo 'abc def ghij afc' | sed 's/a\(.\)c/XX\1XX/g'
+XXbXX def ghij XXfXX  /*将abc和afc两边替换成XX*/
+[chunleimeng]$ echo '1234567' | sed '    /*三个一组加上逗号*/
+> :start
+> s/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/
+> t start'
+1,234,567
+\end{lstlisting}
+
 \end{document}
 
