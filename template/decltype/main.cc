@@ -9,6 +9,11 @@ int main() {
   std::cout << len("hello") << "\n";
   std::cout << len(v) << "\n";
   std::cout << len(al) << "\n";
+
+  std::cout << "100: " << IsPrime<100>::value << "\n";
+  std::cout << "101: " << IsPrime<101>::value << "\n";
+  std::cout << "2: " << IsPrime<2>::value << "\n";
+
   return 0;
 }
 
