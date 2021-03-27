@@ -1,2 +1,1 @@
-# cplusplus
-This repo is about c++.
+this repo is about c++.
